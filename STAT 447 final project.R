@@ -14,14 +14,14 @@ df <- read.csv("v50_PM10_1970_2015 (1)(TOTALS BY COUNTRY).csv") %>%
     names_to = "year", # Create a new column containing the years
     values_to = "pm25", # Create a new column containing the pm2.5 values
     values_drop_na = TRUE # Remove NA pm2.5 rows
-  )
-# Convert "Y_1990" → 1990
-mutate(year = as.numeric(gsub("Y_", "", year)))
+  ) %>%
+  # Convert "Y_1990" → 1990
+  mutate(year = as.numeric(gsub("Y_", "", year)))
 
 stan_data <- list(
   N = nrow(df), # Total observations
+  pm25 = df$pm25,
   year = df$year - min(df$year), # Centered year (1970-2015 becomes 0-45)
-  pm25 = df$pm25, # pm2.5 measurements
   annex = ifelse(df$IPCC.Annex == "Annex_I", 1, 0), # Binary annex status
   country_id = as.numeric(factor(df$ISO_A3)), # Unique country IDs
   region_id = as.numeric(factor(df$World.Region)), # Unique region IDs
@@ -34,7 +34,8 @@ spatial_model <- stan(
   file = "spatial_model_rao.stan",
   data = stan_data,
   chains = 4,
-  iter = 2000,  # 400 total iterations (200 warmup + 200 sampling)
+  iter = 2000,
+  seed = 1
 )
 
 print(spatial_model, pars = c("alpha", "beta_year", "beta_annex", "beta_interaction"))
